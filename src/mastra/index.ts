@@ -7,10 +7,8 @@ export const mastra = new Mastra({
   agents: {
     dietAgent
   },
-  tools: {
-    searchFoodTool,
-    getFoodDetailsTool
-  },
+  tools: [searchFoodTool,
+    getFoodDetailsTool],
   workflows: {
     dietLoggingWorkflow
   }
@@ -18,3 +16,5 @@ export const mastra = new Mastra({
 
 // 导出类型供其他文件使用
 export type MastraInstance = typeof mastra;
+
+
