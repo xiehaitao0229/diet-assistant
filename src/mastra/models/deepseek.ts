@@ -1,23 +1,17 @@
-import { openai } from "@ai-sdk/openai";
+import { openai, createOpenAI } from "@ai-sdk/openai";
 
-// 方式 1：直接传入配置
-export const deepseekChat = openai("deepseek-chat", {
-  baseURL: "https://api.deepseek.com",
-  apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY,
-});
+// 确保在 Workers 环境中正确获取环境变量
+const getApiKey = () => {
+  // Workers 中通过 env 参数传递，运行时从 process.env 获取
+  return process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+};
 
-export const deepseekReasoner = openai("deepseek-reasoner", {
-  baseURL: "https://api.deepseek.com",
-  apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY,
-});
-
-// 方式 2：创建自定义客户端
-import { createOpenAI } from '@ai-sdk/openai';
+const getBaseURL = () => "https://api.deepseek.com";
 
 export const deepseekClient = createOpenAI({
-  baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY,
+  baseURL: getBaseURL(),
+  apiKey: getApiKey(),
 });
 
-export const deepseekChatV2 = deepseekClient('deepseek-chat');
-export const deepseekReasonerV2 = deepseekClient('deepseek-reasoner');
+export const deepseekChat = deepseekClient('deepseek-chat');
+export const deepseekReasoner = deepseekClient('deepseek-reasoner');
