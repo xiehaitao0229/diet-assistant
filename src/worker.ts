@@ -27,11 +27,7 @@ export default {
       if (url.pathname === '/api/chat' && request.method === 'POST') {
         return await handleChatRequest(request, env);
       }
-      
-      if (url.pathname === '/api/search-food' && request.method === 'POST') {
-        return await handleFoodSearch(request, env);
-      }
-
+    
       // 默认响应
       return new Response('Diet Tracker API', { status: 200 });
       
@@ -66,25 +62,6 @@ async function handleChatRequest(request: Request, env: Env): Promise<Response> 
     JSON.stringify({ 
       response: result.text
     }),
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    }
-  );
-}
-
-// 处理食物搜索请求
-async function handleFoodSearch(request: Request, env: Env): Promise<Response> {
-  const { query } = await request.json();
-  
-  // 直接调用 USDA API
-  const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&api_key=${env.USDA_API_KEY}&pageSize=10`);
-  const data = await response.json();
-
-  return new Response(
-    JSON.stringify(data),
     {
       headers: {
         'Content-Type': 'application/json',

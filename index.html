@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI饮食助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            height: 700px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            padding: 24px 32px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header::before {
+            content: '🥗';
+            font-size: 2rem;
+            margin-right: 12px;
+        }
+
+        .chat-header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .chat-header p {
+            margin-top: 8px;
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #fafafa;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .user .message-avatar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .assistant .message-avatar {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 16px 20px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .assistant .message-content {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 6px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .chat-input-container {
+            padding: 24px 32px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 22px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s ease;
+            background: #fafafa;
+        }
+
+        .chat-input:focus {
+            border-color: #4CAF50;
+            background: white;
+        }
+
+        .send-button {
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+            animation: fadeInUp 0.3s ease-out;
+        }
+
+        .loading.show {
+            display: flex;
+        }
+
+        .loading-content {
+            padding: 16px 20px;
+            background: white;
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e0e0e0;
+            max-width: 70%;
+        }
+
+        .loading-text {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .loading-dots-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #4CAF50;
+        }
+
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .loading-dot {
+            width: 6px;
+            height: 6px;
+            background: #4CAF50;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { 
+                transform: scale(0.8);
+                opacity: 0.5;
+            } 
+            40% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .quick-questions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .quick-question {
+            padding: 8px 16px;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #4CAF50;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .quick-question:hover {
+            background: rgba(76, 175, 80, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            border-left: 4px solid #f44336;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .chat-container {
+                height: calc(100vh - 20px);
+                border-radius: 16px;
+            }
+            
+            .chat-header {
+                padding: 20px 24px;
+            }
+            
+            .chat-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .chat-messages {
+                padding: 16px;
+            }
+            
+            .chat-input-container {
+                padding: 16px 20px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+
+        /* 滚动条样式 */
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>AI饮食助手</h1>
+            <p>专业的营养建议，健康的饮食指导</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    您好！我是您的AI饮食助手 🥗<br>
+                    我可以帮您：<br>
+                    • 提供健康饮食建议<br>
+                    • 分析食物搭配<br>
+                    • 回答营养相关问题<br>
+                    • 制定饮食计划<br><br>
+                    请告诉我您想了解什么吧！
+                    
+                    <div class="quick-questions">
+                        <span class="quick-question" onclick="sendQuickQuestion('请推荐一些健康的早餐')">🌅 健康早餐</span>
+                        <span class="quick-question" onclick="sendQuickQuestion('减肥期间应该吃什么')">🏃‍♀️ 减肥建议</span>
+                        <span class="quick-question" onclick="sendQuickQuestion('高蛋白食物推荐')">💪 高蛋白食物</span>
+                        <span class="quick-question" onclick="sendQuickQuestion('如何均衡饮食')">⚖️ 均衡饮食</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea 
+                    id="chatInput" 
+                    class="chat-input" 
+                    placeholder="输入您的问题...例如：如何制定健康的饮食计划？"
+                    rows="1"
+                ></textarea>
+                <button id="sendButton" class="send-button" onclick="sendMessage()">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+         // 根据环境变量判断API地址
+         const isDevelopment = window.location.hostname === 'localhost' || 
+                             window.location.hostname === '127.0.0.1' || 
+                             window.location.hostname.includes('localhost');
+        
+        const API_BASE_URL = isDevelopment 
+            ? 'http://localhost:8787' 
+            : 'https://diet-tracker-app.xie229760995.workers.dev';
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+
+        // 根据问题类型生成思考文本
+        function getThinkingText(message) {
+            const thinkingTexts = {
+                diet_advice: [
+                    "正在分析您的饮食需求...",
+                    "查找最适合的饮食建议...",
+                    "结合营养学原理思考中...",
+                    "为您定制个性化建议..."
+                ],
+                weight_loss: [
+                    "分析减肥饮食策略中...",
+                    "计算热量需求...",
+                    "搜索低卡食物推荐...",
+                    "制定健康减重计划..."
+                ],
+                nutrition: [
+                    "查阅营养学资料...",
+                    "分析营养素搭配...",
+                    "整合健康饮食原则...",
+                    "准备专业建议..."
+                ],
+                recipe: [
+                    "搜索健康食谱...",
+                    "分析食材搭配...",
+                    "考虑营养均衡...",
+                    "准备制作建议..."
+                ],
+                general: [
+                    "正在思考您的问题...",
+                    "整理相关知识...",
+                    "分析最佳回答方式...",
+                    "准备详细回复..."
+                ]
+            };
+
+            let category = 'general';
+            
+            // 判断问题类型
+            if (message.includes('减肥') || message.includes('瘦身') || message.includes('减重') || message.includes('weight loss')) {
+                category = 'weight_loss';
+            } else if (message.includes('建议') || message.includes('应该吃') || message.includes('推荐') || message.includes('饮食')) {
+                category = 'diet_advice';
+            } else if (message.includes('营养') || message.includes('维生素') || message.includes('蛋白质') || message.includes('纤维')) {
+                category = 'nutrition';
+            } else if (message.includes('食谱') || message.includes('怎么做') || message.includes('制作') || message.includes('烹饪')) {
+                category = 'recipe';
+            }
+
+            const texts = thinkingTexts[category];
+            return texts[Math.floor(Math.random() * texts.length)];
+        }
+
+        // 动态更新思考文本
+        function startThinkingAnimation(message) {
+            const loadingText = document.getElementById('currentLoadingText');
+            if (!loadingText) return;
+            
+            const initialText = getThinkingText(message);
+            loadingText.textContent = initialText;
+            
+            // 每2秒更换一次思考文本
+            window.thinkingInterval = setInterval(() => {
+                const currentLoadingElement = document.getElementById('currentLoading');
+                if (currentLoadingElement && loadingText) {
+                    loadingText.textContent = getThinkingText(message);
+                } else {
+                    clearInterval(window.thinkingInterval);
+                }
+            }, 2000);
+        }
+
+        // 自动调整输入框高度
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // 监听回车键发送消息
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 发送消息函数
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // 添加用户消息到聊天界面
+            addMessage(message, 'user');
+            
+            // 清空输入框
+            chatInput.value = '';
+            chatInput.style.height = 'auto';
+            
+            // 显示加载指示器并开始思考动画
+            showLoading(true, message);
+            
+            // 禁用发送按钮
+            sendButton.disabled = true;
+
+            try {
+                const response = await chatWithAI(message);
+                
+                // 添加AI回复到聊天界面
+                addMessage(response, 'assistant');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                addMessage('抱歉，服务暂时不可用，请稍后再试。', 'assistant', true);
+            } finally {
+                // 隐藏加载指示器
+                showLoading(false);
+                
+                // 启用发送按钮
+                sendButton.disabled = false;
+                
+                // 聚焦输入框
+                chatInput.focus();
+            }
+        }
+
+        // 快速问题发送
+        function sendQuickQuestion(question) {
+            chatInput.value = question;
+            sendMessage();
+        }
+
+        // 与AI聊天
+        async function chatWithAI(message) {
+            const response = await fetch(`${API_BASE_URL}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.response || '抱歉，我暂时无法回答您的问题。';
+        }
+
+        // 添加消息到聊天界面
+        function addMessage(content, sender, isError = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? '👤' : '🤖';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            if (isError) {
+                messageContent.innerHTML = `<div class="error-message">${content}</div>`;
+            } else {
+                // 简单的 Markdown 渲染
+                content = content
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
+                messageContent.innerHTML = content;
+            }
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 显示/隐藏加载指示器
+        function showLoading(show, message = '') {
+            if (show) {
+                // 创建加载指示器，紧接在最后一条用户消息后面
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'message assistant';
+                loadingDiv.id = 'currentLoading';
+                
+                const avatar = document.createElement('div');
+                avatar.className = 'message-avatar';
+                avatar.textContent = '🤖';
+                
+                const loadingContent = document.createElement('div');
+                loadingContent.className = 'loading-content';
+                
+                const loadingText = document.createElement('div');
+                loadingText.className = 'loading-text';
+                loadingText.id = 'currentLoadingText';
+                loadingText.textContent = getThinkingText(message);
+                
+                const loadingDotsContainer = document.createElement('div');
+                loadingDotsContainer.className = 'loading-dots-container';
+                
+                const processingText = document.createElement('span');
+                processingText.textContent = '处理中';
+                
+                const loadingDots = document.createElement('div');
+                loadingDots.className = 'loading-dots';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'loading-dot';
+                    loadingDots.appendChild(dot);
+                }
+                
+                loadingDotsContainer.appendChild(processingText);
+                loadingDotsContainer.appendChild(loadingDots);
+                
+                loadingContent.appendChild(loadingText);
+                loadingContent.appendChild(loadingDotsContainer);
+                
+                loadingDiv.appendChild(avatar);
+                loadingDiv.appendChild(loadingContent);
+                
+                // 插入到聊天消息容器的最后
+                chatMessages.appendChild(loadingDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // 开始思考动画
+                startThinkingAnimation(message);
+                
+            } else {
+                // 移除当前的加载指示器
+                const currentLoading = document.getElementById('currentLoading');
+                if (currentLoading) {
+                    currentLoading.remove();
+                }
+                // 清除思考动画定时器
+                if (window.thinkingInterval) {
+                    clearInterval(window.thinkingInterval);
+                }
+            }
+        }
+
+        // 更新加载文本
+        function updateLoadingText(text) {
+            const loadingText = document.getElementById('currentLoadingText');
+            if (loadingText) {
+                loadingText.textContent = text;
+            }
+        }
+
+        // 页面加载完成后聚焦输入框
+        window.addEventListener('load', () => {
+            chatInput.focus();
+        });
+    </script>
+</body>
+</html>
